@@ -1,19 +1,29 @@
-from langchain_openai import ChatOpenAI
-from langchain_core.messages import HumanMessage, SystemMessage
 from ..state import AgentState
 import os
+import requests as _requests
+
+VENICE_BASE_URL = os.getenv("VENICE_BASE_URL", "https://api.venice.ai/api/v1")
+VENICE_API_KEY = os.getenv("VENICE_API_KEY", "")
+VENICE_MODEL = os.getenv("VENICE_MODEL", "llama-3.3-70b")
+
+
+def _venice_chat(messages: list, max_tokens: int = 2000) -> str:
+    key = os.getenv("VENICE_API_KEY", VENICE_API_KEY)
+    resp = _requests.post(
+        f"{VENICE_BASE_URL}/chat/completions",
+        headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+        json={"model": VENICE_MODEL, "messages": messages, "max_tokens": max_tokens,
+              "venice_parameters": {"enable_web_search": "off"}},
+        timeout=60,
+    )
+    resp.raise_for_status()
+    return resp.json()["choices"][0]["message"]["content"]
+
 
 def synthesizer_node(state: AgentState) -> dict:
     """
     Synthesize all research results + decision into a final report.
     """
-    llm = ChatOpenAI(
-        base_url=os.getenv("VENICE_BASE_URL", "https://api.venice.ai/api/v1"),
-        api_key=os.getenv("VENICE_API_KEY"),
-        model=os.getenv("VENICE_MODEL", "llama-3.3-70b"),
-        temperature=0.4,
-        max_tokens=2000,
-    )
 
     combined_research = "\n\n---\n\n".join(state["results"]) if state.get("results") else ""
 
@@ -33,29 +43,10 @@ def synthesizer_node(state: AgentState) -> dict:
 {chr(10).join([f"• {step}" for step in decision.get('reasoning_chain', [])])}
 """
 
-    response = llm.invoke([
-        SystemMessage(content="""You are a senior research analyst.
-        Synthesize the provided research and AI decision into a comprehensive report.
-        Use markdown formatting. Include: Executive Summary, Analysis, Decision Rationale,
-        Risk Assessment, and Final Recommendations. Be specific, data-driven, and actionable."""),
-        HumanMessage(content=f"""
-Original Goal: {state['goal']}
-
-Research Collected:
-{combined_research}
-
-{decision_summary}
-
-Total spent on Venice AI inference: {state['total_spent_usdc']:.4f} USDC via x402 payments
-Research calls made: {len(state['results'])}
-Delegation levels: User → Orchestrator → 3 Sub-agents (Researcher/Analyst/Decider)
-Execution method: 1Shot Permissionless Relayer (ERC-7710 + ERC-7702)
-
-Synthesize this into a final professional report that highlights the decision and its rationale.
-""")
-    ])
-
-    report = response.content
+    report = _venice_chat([
+        {"role": "system", "content": "You are a research analyst. Write a concise markdown report with: Executive Summary, Key Findings, and Recommendations. Be brief and direct."},
+        {"role": "user", "content": f"Goal: {state['goal']}\n\nResearch:\n{combined_research[:2000]}\n\nWrite a brief markdown report."},
+    ], max_tokens=600)
 
     return {
         "report": report,

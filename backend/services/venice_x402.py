@@ -22,7 +22,7 @@ async def chat_completion(
     model: str = DEFAULT_MODEL,
     payment_proof: Optional[str] = None,
     max_tokens: int = 1200,
-    enable_web_search: bool = True,
+    enable_web_search: bool = False,
 ) -> tuple[str, Optional[dict]]:
     """
     Call Venice AI chat completions.
@@ -85,6 +85,60 @@ async def chat_with_x402_payment(
     Caller inspects payment_req to execute on-chain payment if needed.
     """
     return await chat_completion(messages, model=model, payment_proof=payment_proof, **kwargs)
+
+
+def chat_with_x402_payment_sync(
+    messages: list[dict],
+    model: str = DEFAULT_MODEL,
+    payment_proof: Optional[str] = None,
+    max_tokens: int = 1200,
+    enable_web_search: bool = False,
+) -> tuple[str, Optional[dict]]:
+    """
+    SYNCHRONOUS Venice AI chat with x402 fallback.
+    Use this from sync contexts (e.g., sync function in thread).
+
+    Returns:
+        (content, None) — success
+        (None, payment_req) — 402 Payment Required (caller must pay)
+    """
+    headers: dict[str, str] = {"Content-Type": "application/json"}
+
+    if payment_proof:
+        headers["X-Payment"] = payment_proof
+    elif VENICE_API_KEY:
+        headers["Authorization"] = f"Bearer {VENICE_API_KEY}"
+
+    payload = {
+        "model": model,
+        "messages": messages,
+        "max_tokens": max_tokens,
+    }
+    if enable_web_search:
+        payload["venice_parameters"] = {"enable_web_search": "on"}
+
+    try:
+        import requests as _requests
+        resp = _requests.post(
+            f"{VENICE_BASE_URL}/chat/completions",
+            headers=headers,
+            json=payload,
+            timeout=30,
+        )
+
+        if resp.status_code == 402:
+            try:
+                payment_req = resp.json()
+            except Exception:
+                payment_req = {}
+            return None, payment_req
+
+        resp.raise_for_status()
+        data = resp.json()
+        content = data["choices"][0]["message"]["content"]
+        return content, None
+    except Exception as e:
+        return f"[Venice API Error: {str(e)[:100]}]", None
 
 
 def build_venice_payment_calldata(to: str, amount_usdc: int) -> str:

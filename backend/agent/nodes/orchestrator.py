@@ -65,17 +65,20 @@ def orchestrator_node(state: AgentState) -> dict:
         sub_budget_units = int(budget_raw * ratio)
         sub_budget_usdc = sub_budget_units / 1_000_000
 
-        signed_redelegation = create_signed_redelegation(
-            delegate_address=sub_acct.address,
-            delegator_address=orchestrator_acct.address,
-            parent_delegation=root_delegation,
-            max_usdc_units=sub_budget_units,
-            enforcer_address=enforcer_address,
-            usdc_address=usdc_address,
-            private_key=orchestrator_key,
-            delegation_manager=delegation_manager,
-            chain_id=chain_id,
-        )
+        if root_delegation and delegation_manager and enforcer_address and usdc_address:
+            signed_redelegation = create_signed_redelegation(
+                delegate_address=sub_acct.address,
+                delegator_address=orchestrator_acct.address,
+                parent_delegation=root_delegation,
+                max_usdc_units=sub_budget_units,
+                enforcer_address=enforcer_address,
+                usdc_address=usdc_address,
+                private_key=orchestrator_key,
+                delegation_manager=delegation_manager,
+                chain_id=chain_id,
+            )
+        else:
+            signed_redelegation = {}
 
         sub_agents[role] = {
             "address": sub_acct.address,

@@ -77,5 +77,5 @@ async def wait_for_confirmation(task_id: str, max_attempts: int = 15) -> dict:
         status = await get_status(task_id)
         if status.get("status") in terminal:
             return status
-        await asyncio.sleep(3 if attempt < 5 else 5)
+        await asyncio.sleep(1 if attempt < 5 else 2)
     return {"status": "Timeout", "taskId": task_id}

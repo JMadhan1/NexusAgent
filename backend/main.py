@@ -1,17 +1,18 @@
 import os
 import json
 import asyncio
+from dotenv import load_dotenv
+
+load_dotenv()  # must be before agent imports so os.getenv() reads .env values
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from dotenv import load_dotenv
 from agent.graph import agent_graph
 from agent.state import AgentState
 from agent.nodes.orchestrator import get_agent_addresses, AGENT_PRIVATE_KEY
 from services.delegation_signer import create_root_delegation
-
-load_dotenv()
 
 # Base mainnet MetaMask delegation-framework v1.3.0 — used by /agent/demo
 _DEMO_DELEGATION_MANAGER = "0x739f517E8e4f4dba64f4FEADCA6eBfe6B23Ac5f7"
@@ -170,7 +171,7 @@ async def run_agent_demo():
     )
 
     initial_state: AgentState = {
-        "goal": "Research the current state of AI agents in crypto: key projects, adoption, and the regulatory landscape in 2025.",
+        "goal": "Summarize AI agents in crypto: top 3 projects and their use cases in 2025.",
         "subtasks": [],
         "results": [],
         "payments": [],
@@ -190,8 +191,20 @@ async def run_agent_demo():
         "events": [],
         "error": None,
     }
-    loop = asyncio.get_running_loop()
-    result = await loop.run_in_executor(None, lambda: agent_graph.invoke(initial_state))
+    import sys, subprocess
+    proc = await asyncio.create_subprocess_exec(
+        sys.executable, "demo_run.py",
+        "--goal", initial_state["goal"],
+        "--budget", str(initial_state["budget_usdc"]),
+        "--json",
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        cwd=os.path.dirname(os.path.abspath(__file__)),
+    )
+    stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=300)
+    if proc.returncode != 0:
+        return {"success": False, "error": stderr.decode()[-500:]}
+    result = json.loads(stdout.decode())
     return {
         "success": True,
         "demo_user": demo_user.address,
@@ -199,8 +212,8 @@ async def run_agent_demo():
         "report": result.get("report"),
         "payments": result.get("payments", []),
         "total_spent_usdc": result.get("total_spent_usdc", 0),
-        "sub_agents": list(result.get("sub_agents", {}).keys()),
-        "event_count": len(result.get("events", [])),
+        "sub_agents": result.get("sub_agents", []),
+        "event_count": result.get("event_count", 0),
     }
 
 

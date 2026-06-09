@@ -118,8 +118,12 @@ def sign_delegation(
     struct_h = delegation_struct_hash(delegation)
     domain_sep = _domain_separator(delegation_manager, chain_id)
     digest = Web3.keccak(b"\x19\x01" + domain_sep + struct_h)
-    signed = Account.sign_hash(digest, private_key=private_key)
-    return "0x" + signed.signature.hex()
+    # Sign the raw EIP-712 digest (no extra prefix)
+    from eth_account._utils.signing import sign_message_hash
+    from eth_keys import keys
+    pk = keys.PrivateKey(bytes.fromhex(private_key.removeprefix("0x")))
+    (v, r, s, signed_bytes) = sign_message_hash(pk, digest)
+    return "0x" + signed_bytes.hex()
 
 
 def erc20_transfer_amount_terms(token_address: str, max_amount_usdc_units: int) -> str:

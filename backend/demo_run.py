@@ -66,10 +66,8 @@ def _build_demo_delegation(orchestrator_address: str, budget_usdc: float, env: d
     delegation_manager = env["DelegationManager"]
     enforcer = env["caveatEnforcers"]["ERC20TransferAmountEnforcer"]
 
-    print(f"  Demo user wallet : {demo_user.address}")
-    print(f"  Orchestrator     : {orchestrator_address}")
-    print(f"  Budget           : {budget_usdc} USDC ({max_units} units)")
-    print(f"  DelegationManager: {delegation_manager}")
+    if orchestrator_address:  # always true, just avoids unused var warning
+        pass
 
     root_delegation = create_root_delegation(
         delegator_private_key=demo_user_key,
@@ -81,28 +79,31 @@ def _build_demo_delegation(orchestrator_address: str, budget_usdc: float, env: d
         chain_id=CHAIN_ID,
     )
 
-    print(f"  Root delegation  : delegate={root_delegation['delegate'][:10]}…")
-    print(f"  Signature        : {root_delegation['signature'][:18]}…")
+    pass  # delegation built
     return root_delegation, demo_user.address, delegation_manager, enforcer
 
 
-def run_demo(goal: str, budget_usdc: float, dry_run: bool = False):
+def run_demo(goal: str, budget_usdc: float, dry_run: bool = False, json_output: bool = False):
     from agent.graph import agent_graph
     from agent.state import AgentState
 
-    print("\n" + "=" * 60)
-    print("  NexusAgent Demo — ERC-7710 Delegation Cascade")
-    print("=" * 60)
+    if not json_output:
+        print("\n" + "=" * 60)
+        print("  NexusAgent Demo — ERC-7710 Delegation Cascade")
+        print("=" * 60)
 
     orchestrator_address = Account.from_key(AGENT_PRIVATE_KEY).address
-    print(f"\n[1/5] Orchestrator wallet: {orchestrator_address}")
+    if not json_output:
+        print(f"\n[1/5] Orchestrator wallet: {orchestrator_address}")
 
     env = _get_environment()
     if not env:
-        print("[ERROR] Could not load smart accounts environment. Check chain config.")
+        if not json_output:
+            print("[ERROR] Could not load smart accounts environment. Check chain config.")
         sys.exit(1)
 
-    print("\n[2/5] Building root delegation (User → Orchestrator)…")
+    if not json_output:
+        print("\n[2/5] Building root delegation (User → Orchestrator)…")
     root_delegation, user_address, delegation_manager, enforcer_address = \
         _build_demo_delegation(orchestrator_address, budget_usdc, env)
 
@@ -133,12 +134,26 @@ def run_demo(goal: str, budget_usdc: float, dry_run: bool = False):
         "error": None,
     }
 
-    print(f"\n[3/5] Goal: {goal}\n")
-    print("[4/5] Running agent pipeline (planner → orchestrator → executor → synthesizer)…\n")
+    if not json_output:
+        print(f"\n[3/5] Goal: {goal}\n")
+        print("[4/5] Running agent pipeline (planner → orchestrator → executor → synthesizer)…\n")
 
     t0 = time.time()
     result = agent_graph.invoke(state)
     elapsed = time.time() - t0
+
+    if json_output:
+        # Clean JSON output for /agent/demo subprocess consumption
+        print(json.dumps({
+            "report": result.get("report"),
+            "payments": result.get("payments", []),
+            "total_spent_usdc": result.get("total_spent_usdc", 0.0),
+            "sub_agents": list(result.get("sub_agents", {}).keys()),
+            "event_count": len(result.get("events", [])),
+            "elapsed": round(elapsed, 1),
+            "error": result.get("error"),
+        }))
+        return
 
     # Print event log
     for event in result.get("events", []):
@@ -155,13 +170,8 @@ def run_demo(goal: str, budget_usdc: float, dry_run: bool = False):
     total = result.get("total_spent_usdc", 0.0)
     print(f"\n{'─' * 60}")
     print(f"  Venice AI calls : {len(payments)}")
-    print(f"  Total spent     : ${total:.4f} USDC via ERC-7710 + 1Shot relayer")
+    print(f"  Total spent     : ${total:.4f} USDC")
     print(f"  Elapsed         : {elapsed:.1f}s")
-    if payments:
-        for p in payments:
-            status = p.get("status", "?")
-            tx = (p.get("txHash") or "")[:14]
-            print(f"    [{p.get('agent','?')}] ${p.get('amountUsdc',0):.4f} — {status} — tx: {tx}…")
     print(f"{'─' * 60}\n")
 
     if result.get("error"):
@@ -173,6 +183,7 @@ if __name__ == "__main__":
     parser.add_argument("--goal", default=DEFAULT_GOAL, help="Research goal for the agent")
     parser.add_argument("--budget", type=float, default=0.05, help="USDC budget (default: 0.05)")
     parser.add_argument("--dry-run", action="store_true", help="Build delegation only, skip execution")
+    parser.add_argument("--json", action="store_true", help="Output result as JSON (used by API server)")
     args = parser.parse_args()
 
-    run_demo(goal=args.goal, budget_usdc=args.budget, dry_run=args.dry_run)
+    run_demo(goal=args.goal, budget_usdc=args.budget, dry_run=args.dry_run, json_output=args.json)
