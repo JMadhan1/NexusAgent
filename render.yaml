@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: nexusagent-backend
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: VENICE_API_KEY
+        sync: false
+      - key: VENICE_BASE_URL
+        value: https://api.venice.ai/api/v1
+      - key: VENICE_MODEL
+        value: llama-3.3-70b
+      - key: AGENT_PRIVATE_KEY
+        sync: false
+      - key: ONESHOT_RELAYER_URL
+        sync: false
+      - key: ONESHOT_ENABLED
+        value: "false"
+      - key: PYTHON_VERSION
+        value: "3.11.0"
