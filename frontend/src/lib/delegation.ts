@@ -1,11 +1,27 @@
 import { parseUnits } from 'viem'
+import type { SmartAccountResult } from './smartAccount'
 import {
   createDelegation,
   ScopeType,
   type Delegation,
   type Caveat,
 } from '@metamask/smart-accounts-kit'
-import type { SmartAccountResult } from './smartAccount'
+
+// EIP-712 types for Delegation signing (from delegation-framework spec)
+const DELEGATION_TYPES = {
+  Caveat: [
+    { name: 'enforcer', type: 'address' },
+    { name: 'terms', type: 'bytes' },
+    { name: 'args', type: 'bytes' },
+  ],
+  Delegation: [
+    { name: 'delegate', type: 'address' },
+    { name: 'delegator', type: 'address' },
+    { name: 'authority', type: 'bytes32' },
+    { name: 'caveats', type: 'Caveat[]' },
+    { name: 'salt', type: 'bytes32' },
+  ],
+} as const
 
 // USDC on Base mainnet
 export const USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as `0x${string}`
@@ -27,7 +43,7 @@ export async function createAgentDelegation(
   budgetUsdc: number,
   agentAddress: `0x${string}`,
 ): Promise<DelegationResult> {
-  const { smartAccount, environment } = accountResult
+  const { smartAccount, environment, walletClient, address } = accountResult
   const maxAmount = parseUnits(budgetUsdc.toString(), 6)
 
   const delegationManager = environment.DelegationManager as `0x${string}`
@@ -46,9 +62,27 @@ export async function createAgentDelegation(
     },
   })
 
-  // Sign — triggers EIP-712 typed data popup in MetaMask
+  // Sign via walletClient.signTypedData — avoids "internal account" restriction
   const { signature: _unused, ...delegationToSign } = delegation
-  const signature = await smartAccount.signDelegation({ delegation: delegationToSign })
+  const signature = await walletClient.signTypedData({
+    account: address,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    types: DELEGATION_TYPES,
+    primaryType: 'Delegation',
+    domain: {
+      name: 'DelegationManager',
+      version: '1',
+      chainId: 8453,
+      verifyingContract: delegationManager,
+    },
+    message: {
+      delegate: delegationToSign.delegate,
+      delegator: delegationToSign.delegator,
+      authority: delegationToSign.authority,
+      caveats: delegationToSign.caveats,
+      salt: delegationToSign.salt,
+    },
+  })
 
   const signedDelegation: Delegation = { ...delegation, signature }
 
