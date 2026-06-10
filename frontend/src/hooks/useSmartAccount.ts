@@ -10,9 +10,7 @@ export function useSmartAccount() {
     setLoading(true)
     setError(null)
     try {
-      if (!window.ethereum) throw new Error('MetaMask not found. Install MetaMask.')
-      // Request accounts first so MetaMask prompts the user
-      await (window.ethereum as any).request({ method: 'eth_requestAccounts' })
+      if (!window.ethereum) throw new Error('MetaMask not found. Please install MetaMask.')
       const result = await createSmartAccount()
       setAccountResult(result)
       return result
