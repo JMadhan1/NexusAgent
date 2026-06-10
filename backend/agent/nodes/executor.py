@@ -84,6 +84,8 @@ def executor_node(state: AgentState) -> dict:
 
     from concurrent.futures import ThreadPoolExecutor, as_completed
 
+    COST_PER_CALL = 0.003
+
     def _call_venice(args):
         i, subtask = args
         role = roles[i % len(roles)]
@@ -92,26 +94,36 @@ def executor_node(state: AgentState) -> dict:
                 {"role": "system", "content": f"You are a {role} AI research agent. Be concise and specific."},
                 {"role": "user", "content": subtask},
             ]
-            content, _ = chat_with_x402_payment_sync(msgs, model=VENICE_MODEL, max_tokens=400)
+            content, err = chat_with_x402_payment_sync(msgs, model=VENICE_MODEL, max_tokens=400)
             if content and not content.startswith("[Venice API Error"):
-                return i, role, f"[{role.upper()}]\n{content}", "ok"
+                payment = {"agent": role, "endpoint": "venice.ai/chat", "amountUsdc": COST_PER_CALL, "status": "confirmed"}
+                return i, role, f"[{role.upper()}]\n{content}", "ok", payment
+            # Log actual error
+            error_detail = content or str(err)
+            print(f"[VENICE ERROR] role={role} error={error_detail[:200]}", flush=True)
+            return i, role, f"[{role.upper()}]\n{_generate_fallback_response(role, subtask)}", f"fallback:{error_detail[:80]}", None
         except Exception as e:
-            pass
-        return i, role, f"[{role.upper()}]\n{_generate_fallback_response(role, subtask)}", "fallback"
+            print(f"[VENICE EXCEPTION] role={role} exception={str(e)[:200]}", flush=True)
+            return i, role, f"[{role.upper()}]\n{_generate_fallback_response(role, subtask)}", f"fallback:{str(e)[:80]}", None
 
     ordered = {}
     with ThreadPoolExecutor(max_workers=min(3, len(subtasks))) as pool:
         futures = [pool.submit(_call_venice, (i, st)) for i, st in enumerate(subtasks)]
         for fut in as_completed(futures):
-            i, role, content, status = fut.result()
-            ordered[i] = (role, content, status)
+            i, role, content, status, payment = fut.result()
+            ordered[i] = (role, content, status, payment)
             events.append({"type": "venice_call", "message": f"[{role}] ✅ Subtask {i+1} complete"})
 
     for i in sorted(ordered):
-        role, content, status = ordered[i]
+        role, content, status, payment = ordered[i]
         results.append(content)
-        if status == "fallback":
-            events.append({"type": "warning", "message": f"[{role}] Used fallback response"})
+        if payment:
+            payments.append(payment)
+            total_spent += payment["amountUsdc"]
+            events.append({"type": "payment", "message": f"💰 Paid {payment['amountUsdc']} USDC for [{role}] via x402", "data": payment})
+        if status.startswith("fallback"):
+            reason = status[status.index(":")+1:] if ":" in status else ""
+            events.append({"type": "error", "message": f"[{role}] Venice failed — {reason if reason else 'unknown error'}"})
         else:
             events.append({"type": "thinking", "message": f"[{role}] Analysis ready"})
 
