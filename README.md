@@ -20,6 +20,8 @@
 
 ## 🎬 See It In Action
 
+[![Watch Demo](https://img.shields.io/badge/📺_Watch_Demo-YouTube-red?style=for-the-badge)](https://youtu.be/cKNV6j_76t0)
+
 ```
 1. Connect MetaMask          →  EIP-7702 smart account, Base mainnet
 2. Set budget ($1–$100 USDC) →  Drag slider, pick preset, or type custom

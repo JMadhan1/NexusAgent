@@ -86,15 +86,39 @@ def executor_node(state: AgentState) -> dict:
 
     COST_PER_CALL = 0.003
 
+    # Enhanced system prompts for institutional-grade analysis
+    SYSTEM_PROMPTS = {
+        "researcher": """You are an elite DeFi Research Analyst at a top-tier crypto fund. Your analysis must be:
+- Data-driven with specific protocols, TVL, APY numbers
+- Include recent market trends and on-chain metrics
+- Mention risks and opportunities clearly
+- Cite sources when possible
+- Format with clear sections: Market Overview, Key Protocols, Emerging Trends, Risks""",
+        "analyst": """You are a Senior Risk Analyst at a DeFi institutional desk. Your assessment must include:
+- Smart contract risk (audit status, TVL, bug bounty)
+- Economic risk (impermanent loss, yield sustainability)
+- Regulatory risk (compliance, jurisdiction)
+- Liquidity risk (depth, slippage)
+- Market risk (volatility, correlation)
+- Provide specific risk scores (0-100) and confidence levels""",
+        "synthesizer": """You are a Chief Investment Officer synthesizing research into actionable insights. Your output must:
+- Combine research and analyst findings
+- Provide clear investment recommendation with APY, risk, and time horizon
+- Include position sizing suggestion
+- Highlight key catalysts and watch items
+- Be decisive and specific"""
+    }
+
     def _call_venice(args):
         i, subtask = args
         role = roles[i % len(roles)]
         try:
             msgs = [
-                {"role": "system", "content": f"You are a {role} AI research agent. Be concise and specific."},
+                {"role": "system", "content": SYSTEM_PROMPTS.get(role, f"You are a {role} AI research agent.")},
                 {"role": "user", "content": subtask},
             ]
-            content, err = chat_with_x402_payment_sync(msgs, model=VENICE_MODEL, max_tokens=400)
+            # Enable web search for real-time data, increase tokens for detailed analysis
+            content, err = chat_with_x402_payment_sync(msgs, model=VENICE_MODEL, max_tokens=1200, enable_web_search=True)
             if content and not content.startswith("[Venice API Error"):
                 payment = {"agent": role, "endpoint": "venice.ai/chat", "amountUsdc": COST_PER_CALL, "status": "confirmed"}
                 return i, role, f"[{role.upper()}]\n{content}", "ok", payment

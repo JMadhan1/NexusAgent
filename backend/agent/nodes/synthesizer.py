@@ -44,9 +44,9 @@ def synthesizer_node(state: AgentState) -> dict:
 """
 
     report = _venice_chat([
-        {"role": "system", "content": "You are a research analyst. Write a concise markdown report with: Executive Summary, Key Findings, and Recommendations. Be brief and direct."},
-        {"role": "user", "content": f"Goal: {state['goal']}\n\nResearch:\n{combined_research[:2000]}\n\nWrite a brief markdown report."},
-    ], max_tokens=600)
+        {"role": "system", "content": "You are a Chief Investment Officer at a top crypto fund. Write an institutional-grade markdown report with: Executive Summary, Investment Thesis, Risk Assessment, and Actionable Recommendation. Be specific with APY, risk scores, and position sizing."},
+        {"role": "user", "content": f"Goal: {state['goal']}\n\nResearch:\n{combined_research[:3000]}\n\nWrite a comprehensive investment report."},
+    ], max_tokens=1500)
 
     return {
         "report": report,
