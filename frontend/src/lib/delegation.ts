@@ -1,7 +1,8 @@
-import { encodePacked, parseUnits } from 'viem'
+import { parseUnits } from 'viem'
 import {
   createDelegation,
-  createCaveat,
+  ROOT_AUTHORITY,
+  ScopeType,
   type Delegation,
   type Caveat,
 } from '@metamask/smart-accounts-kit'
@@ -30,23 +31,24 @@ export async function createAgentDelegation(
   const { smartAccount, environment } = accountResult
   const maxAmount = parseUnits(budgetUsdc.toString(), 6)
 
-  const enforcerAddress = environment.caveatEnforcers
-    .ERC20TransferAmountEnforcer as `0x${string}`
   const delegationManager = environment.DelegationManager as `0x${string}`
+  const enforcerAddress = environment.caveatEnforcers
+    ?.ERC20TransferAmountEnforcer as `0x${string}` ?? '0x0000000000000000000000000000000000000000'
 
-  // ERC20TransferAmountEnforcer terms: encodePacked(address token, uint256 maxAmount) = 52 bytes
-  const terms = encodePacked(['address', 'uint256'], [USDC_ADDRESS, maxAmount])
-  const caveat: Caveat = createCaveat(enforcerAddress, terms)
-
-  // Create unsigned delegation (returned with signature: '0x')
+  // New API: environment always required; parentDelegation=ROOT_AUTHORITY for root delegations
   const delegation = createDelegation({
     environment,
     from: smartAccount.address as `0x${string}`,
     to: agentAddress,
-    caveats: [caveat],
+    parentDelegation: ROOT_AUTHORITY,
+    scope: {
+      type: ScopeType.Erc20TransferAmount,
+      tokenAddress: USDC_ADDRESS,
+      maxAmount,
+    },
   })
 
-  // Sign with MetaMask — triggers EIP-712 typed data popup in the browser
+  // Sign — triggers EIP-712 typed data popup in MetaMask
   const { signature: _unused, ...delegationToSign } = delegation
   const signature = await smartAccount.signDelegation({ delegation: delegationToSign })
 
