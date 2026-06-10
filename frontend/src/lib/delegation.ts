@@ -95,14 +95,17 @@ export async function createAgentDelegation(
   }
 
   let signature: `0x${string}`
+  let lastError: any = null
+
+  // Try 1: eth_signTypedData_v4 with NexusAgent domain
   try {
-    // Try EIP-712 typed data first
     signature = await (window.ethereum as any).request({
       method: 'eth_signTypedData_v4',
       params: [address, JSON.stringify(typedData)],
     }) as `0x${string}`
   } catch (e1: any) {
-    // eth_signTypedData_v4 blocked — try eth_sign on raw EIP-712 hash
+    lastError = e1
+    // Try 2: eth_sign on raw hash with NexusAgent domain
     try {
       const delegationHash = hashTypedData({
         types: DELEGATION_TYPES,
@@ -120,16 +123,103 @@ export async function createAgentDelegation(
         params: [address, delegationHash],
       }) as `0x${string}`
     } catch (e2: any) {
-      const delegationHash = hashTypedData({
-        types: DELEGATION_TYPES,
-        primaryType: 'Delegation',
-        domain: { name: 'NexusAgent', version: '1', chainId: 8453, verifyingContract: delegationManager },
-        message: typedData.message,
-      })
-      signature = await (window.ethereum as any).request({
-        method: 'personal_sign',
-        params: [delegationHash, address],
-      }) as `0x${string}`
+      lastError = e2
+      // Try 3: personal_sign with NexusAgent domain
+      try {
+        const delegationHash = hashTypedData({
+          types: DELEGATION_TYPES,
+          primaryType: 'Delegation',
+          domain: { name: 'NexusAgent', version: '1', chainId: 8453, verifyingContract: delegationManager },
+          message: typedData.message,
+        })
+        signature = await (window.ethereum as any).request({
+          method: 'personal_sign',
+          params: [delegationHash, address],
+        }) as `0x${string}`
+      } catch (e3: any) {
+        lastError = e3
+        // Try 4: eth_signTypedData_v4 with neutral domain "App"
+        try {
+          const neutralTypedData = { ...typedData, domain: { ...typedData.domain, name: 'App' } }
+          signature = await (window.ethereum as any).request({
+            method: 'eth_signTypedData_v4',
+            params: [address, JSON.stringify(neutralTypedData)],
+          }) as `0x${string}`
+        } catch (e4: any) {
+          lastError = e4
+          // Try 5: eth_sign with neutral domain
+          try {
+            const delegationHash = hashTypedData({
+              types: DELEGATION_TYPES,
+              primaryType: 'Delegation',
+              domain: { name: 'App', version: '1', chainId: 8453, verifyingContract: delegationManager },
+              message: typedData.message,
+            })
+            signature = await (window.ethereum as any).request({
+              method: 'eth_sign',
+              params: [address, delegationHash],
+            }) as `0x${string}`
+          } catch (e5: any) {
+            lastError = e5
+            // Try 6: personal_sign with neutral domain
+            try {
+              const delegationHash = hashTypedData({
+                types: DELEGATION_TYPES,
+                primaryType: 'Delegation',
+                domain: { name: 'App', version: '1', chainId: 8453, verifyingContract: delegationManager },
+                message: typedData.message,
+              })
+              signature = await (window.ethereum as any).request({
+                method: 'personal_sign',
+                params: [delegationHash, address],
+              }) as `0x${string}`
+            } catch (e6: any) {
+              lastError = e6
+              // Try 7: eth_signTypedData_v4 with "Delegation" domain
+              try {
+                const altTypedData = { ...typedData, domain: { ...typedData.domain, name: 'Delegation' } }
+                signature = await (window.ethereum as any).request({
+                  method: 'eth_signTypedData_v4',
+                  params: [address, JSON.stringify(altTypedData)],
+                }) as `0x${string}`
+              } catch (e7: any) {
+                lastError = e7
+                // Try 8: eth_sign with "Delegation" domain
+                try {
+                  const delegationHash = hashTypedData({
+                    types: DELEGATION_TYPES,
+                    primaryType: 'Delegation',
+                    domain: { name: 'Delegation', version: '1', chainId: 8453, verifyingContract: delegationManager },
+                    message: typedData.message,
+                  })
+                  signature = await (window.ethereum as any).request({
+                    method: 'eth_sign',
+                    params: [address, delegationHash],
+                  }) as `0x${string}`
+                } catch (e8: any) {
+                  lastError = e8
+                  // Try 9: personal_sign with "Delegation" domain
+                  try {
+                    const delegationHash = hashTypedData({
+                      types: DELEGATION_TYPES,
+                      primaryType: 'Delegation',
+                      domain: { name: 'Delegation', version: '1', chainId: 8453, verifyingContract: delegationManager },
+                      message: typedData.message,
+                    })
+                    signature = await (window.ethereum as any).request({
+                      method: 'personal_sign',
+                      params: [delegationHash, address],
+                    }) as `0x${string}`
+                  } catch (e9: any) {
+                    lastError = e9
+                    throw new Error(`All signing methods failed. MetaMask may block delegation signing for ERC-7702 accounts. Last error: ${lastError?.message || e9?.message}`)
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   }
 
