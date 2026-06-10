@@ -4,6 +4,7 @@ import { PaymentLog } from './PaymentLog'
 import { BudgetTracker } from './BudgetTracker'
 import { ReportViewer } from './ReportViewer'
 import { DelegationCascade } from './DelegationCascade'
+import { DecisionProof } from './DecisionProof'
 import type { DelegationResult } from '../lib/delegation'
 import { serializeDelegation } from '../lib/delegation'
 
@@ -23,6 +24,7 @@ export function AgentConsole({ delegationResult, budget }: { delegationResult: D
   const [payments, setPayments] = useState<any[]>([])
   const [totalSpent, setTotalSpent] = useState(0)
   const [report, setReport] = useState<string | null>(null)
+  const [decisionData, setDecisionData] = useState<any | null>(null)
   const [cascadeEvents, setCascadeEvents] = useState<AgentEvent[]>([])
   const [subAgentStatuses, setSubAgentStatuses] = useState<Record<string, NodeStatus>>({})
   const feedRef = useRef<HTMLDivElement>(null)
@@ -39,6 +41,7 @@ export function AgentConsole({ delegationResult, budget }: { delegationResult: D
     setEvents([])
     setPayments([])
     setReport(null)
+    setDecisionData(null)
     setCascadeEvents([])
     setSubAgentStatuses({})
 
@@ -93,6 +96,9 @@ export function AgentConsole({ delegationResult, budget }: { delegationResult: D
 
             if (event.type === 'done' && event.data?.report) {
               setReport(event.data.report)
+            }
+            if (event.type === 'output' && event.data?.on_chain_proof) {
+              setDecisionData(event.data)
             }
           } catch (e) {
             // Ignore parse errors
@@ -189,6 +195,9 @@ export function AgentConsole({ delegationResult, budget }: { delegationResult: D
 
       {/* Payment log */}
       {payments.length > 0 && <PaymentLog payments={payments} />}
+
+      {/* Decision proof */}
+      {decisionData && <DecisionProof data={decisionData} />}
 
       {/* Final report */}
       {report && <ReportViewer report={report} />}
