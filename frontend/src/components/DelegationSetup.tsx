@@ -3,14 +3,24 @@ import { useDelegation } from '../hooks/useDelegation'
 import type { SmartAccountResult } from '../lib/smartAccount'
 import type { DelegationResult } from '../lib/delegation'
 
-const BUDGET_PRESETS = [1, 5, 10, 25]
+const BUDGET_PRESETS = [1, 5, 10, 25, 50, 100]
 
 export function DelegationSetup({ accountResult, onDelegated }: {
   accountResult: SmartAccountResult
   onDelegated: (delegation: DelegationResult) => void
 }) {
   const [budget, setBudget] = useState(5)
+  const [customInput, setCustomInput] = useState('')
+  const [showCustom, setShowCustom] = useState(false)
   const { sign, loading, error } = useDelegation(accountResult)
+
+  const handleCustomSubmit = () => {
+    const val = parseFloat(customInput)
+    if (!isNaN(val) && val > 0) { setBudget(val); setShowCustom(false); setCustomInput('') }
+  }
+
+  const estimatedCalls = Math.floor(budget / 0.003)
+  const riskLevel = budget <= 5 ? { label: 'LOW', color: '#22c55e' } : budget <= 20 ? { label: 'MEDIUM', color: '#f59e0b' } : { label: 'HIGH', color: '#ef4444' }
 
   const handleSign = async () => {
     const result = await sign(budget)
@@ -32,22 +42,55 @@ export function DelegationSetup({ accountResult, onDelegated }: {
 
       {/* Budget selector */}
       <div style={{ marginBottom: '20px' }}>
-        <div style={{ fontSize: '0.72rem', fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' }}>USDC Budget Cap</div>
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+          <div style={{ fontSize: '0.72rem', fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em' }}>USDC Budget Cap</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: '0.65rem', padding: '2px 8px', borderRadius: 4, background: `${riskLevel.color}18`, border: `1px solid ${riskLevel.color}44`, color: riskLevel.color, fontWeight: 700 }}>RISK: {riskLevel.label}</span>
+          </div>
+        </div>
+
+        {/* Big budget display */}
+        <div style={{ textAlign: 'center', marginBottom: 16, padding: '16px', background: 'rgba(245,158,11,0.04)', borderRadius: 12, border: '1px solid rgba(245,158,11,0.1)' }}>
+          <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#f59e0b', fontFamily: 'JetBrains Mono, monospace', lineHeight: 1 }}>${budget}</div>
+          <div style={{ fontSize: '0.65rem', color: '#475569', marginTop: 4 }}>USDC · ≈{estimatedCalls} Venice AI calls</div>
+        </div>
+
+        {/* Slider */}
+        <input
+          type="range" min={1} max={100} step={1} value={Math.min(budget, 100)}
+          onChange={e => setBudget(Number(e.target.value))}
+          style={{ width: '100%', marginBottom: 12, accentColor: '#f59e0b', cursor: 'pointer' }}
+        />
+
+        {/* Presets */}
+        <div style={{ display: 'flex', gap: '6px', marginBottom: '10px', flexWrap: 'wrap' }}>
           {BUDGET_PRESETS.map(p => (
-            <button key={p} onClick={() => setBudget(p)} style={{ padding: '6px 14px', borderRadius: '8px', border: `1px solid ${budget === p ? 'rgba(245,158,11,0.5)' : 'rgba(255,255,255,0.06)'}`, background: budget === p ? 'rgba(245,158,11,0.12)' : 'rgba(255,255,255,0.02)', color: budget === p ? '#f59e0b' : '#64748b', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s', fontFamily: 'JetBrains Mono, monospace' }}>
+            <button key={p} onClick={() => setBudget(p)} style={{ padding: '5px 12px', borderRadius: '8px', border: `1px solid ${budget === p ? 'rgba(245,158,11,0.5)' : 'rgba(255,255,255,0.06)'}`, background: budget === p ? 'rgba(245,158,11,0.12)' : 'rgba(255,255,255,0.02)', color: budget === p ? '#f59e0b' : '#64748b', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s', fontFamily: 'JetBrains Mono, monospace' }}>
               ${p}
             </button>
           ))}
-          <input type="number" value={budget} onChange={e => setBudget(Number(e.target.value))} min={1} max={1000} style={{ width: '70px', padding: '6px 10px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', color: '#e2e8f0', fontSize: '0.78rem', outline: 'none', fontFamily: 'JetBrains Mono, monospace', textAlign: 'center' }} />
+          {/* Custom amount */}
+          {showCustom ? (
+            <div style={{ display: 'flex', gap: 4 }}>
+              <input autoFocus type="number" value={customInput} onChange={e => setCustomInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleCustomSubmit()} placeholder="custom" min={1} style={{ width: '72px', padding: '5px 8px', borderRadius: 8, border: '1px solid rgba(245,158,11,0.3)', background: 'rgba(245,158,11,0.06)', color: '#f59e0b', fontSize: '0.75rem', outline: 'none', fontFamily: 'JetBrains Mono, monospace', textAlign: 'center' }} />
+              <button onClick={handleCustomSubmit} style={{ padding: '5px 8px', borderRadius: 8, background: 'rgba(245,158,11,0.2)', border: '1px solid rgba(245,158,11,0.4)', color: '#f59e0b', fontSize: '0.75rem', cursor: 'pointer' }}>✓</button>
+            </div>
+          ) : (
+            <button onClick={() => setShowCustom(true)} style={{ padding: '5px 12px', borderRadius: '8px', border: '1px dashed rgba(255,255,255,0.1)', background: 'transparent', color: '#475569', fontSize: '0.75rem', cursor: 'pointer' }}>+ custom</button>
+          )}
         </div>
 
-        {/* Budget bar */}
-        <div style={{ height: '4px', background: 'rgba(255,255,255,0.04)', borderRadius: '2px', overflow: 'hidden' }}>
-          <div style={{ height: '100%', width: `${Math.min(budget / 100 * 100, 100)}%`, background: 'linear-gradient(90deg, #6366f1, #f59e0b)', borderRadius: '2px', transition: 'width 0.3s ease' }} />
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px', fontSize: '0.6rem', color: '#334155' }}>
-          <span>$0</span><span style={{ color: '#f59e0b', fontWeight: 600 }}>${budget} USDC max</span><span>$1000</span>
+        {/* Live cost breakdown */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+          {[
+            { label: '~Venice calls', value: `${estimatedCalls}`, color: '#a855f7' },
+            { label: 'Cost per call', value: '$0.003', color: '#6366f1' },
+          ].map(s => (
+            <div key={s.label} style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 8, padding: '6px 10px', border: '1px solid rgba(255,255,255,0.04)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.62rem', color: '#475569' }}>{s.label}</span>
+              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: s.color, fontFamily: 'JetBrains Mono, monospace' }}>{s.value}</span>
+            </div>
+          ))}
         </div>
       </div>
 

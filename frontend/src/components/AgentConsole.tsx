@@ -110,88 +110,87 @@ export function AgentConsole({ delegationResult, budget }: { delegationResult: D
     }
   }
 
-  const getEventColor = (type: AgentEvent['type']) => {
-    const colors = {
-      thinking: 'text-blue-400',
-      payment: 'text-amber-400',
-      venice_call: 'text-purple-400',
-      relay: 'text-green-400',
-      output: 'text-white',
-      cascade: 'text-cyan-400',
-      error: 'text-red-400',
-      done: 'text-green-400',
-    }
-    return colors[type] || 'text-gray-400'
-  }
-
-  const getEventIcon = (type: AgentEvent['type']) => {
-    const icons = {
-      thinking: '🧠',
-      payment: '�',
-      venice_call: '🤖',
-      relay: '⚡',
-      output: '📄',
-      cascade: '🔗',
-      error: '❌',
-      done: '✅',
-    }
-    return icons[type] || '•'
+  const EVENT_STYLES: Record<string, { color: string; icon: string }> = {
+    thinking:    { color: '#6366f1', icon: '🧠' },
+    payment:     { color: '#f59e0b', icon: '💰' },
+    venice_call: { color: '#a855f7', icon: '🤖' },
+    relay:       { color: '#22c55e', icon: '⚡' },
+    output:      { color: '#f8fafc', icon: '📄' },
+    cascade:     { color: '#06b6d4', icon: '🔗' },
+    error:       { color: '#ef4444', icon: '❌' },
+    done:        { color: '#22c55e', icon: '✅' },
   }
 
   return (
-    <div className="space-y-4">
-      <div className="p-4 bg-gray-900 rounded-2xl border border-gray-700">
-        <div className="flex items-center gap-2 mb-3">
-          <Bot className="text-amber-400 w-5 h-5" />
-          <h2 className="text-white font-bold">Agent Goal</h2>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+      {/* Goal input */}
+      <div style={{ background: 'rgba(10,12,20,0.7)', backdropFilter: 'blur(20px)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 16, padding: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+          <Bot size={18} color="#f59e0b" />
+          <span style={{ color: '#f8fafc', fontWeight: 700, fontSize: '0.9rem' }}>Agent Goal</span>
+          {running && (
+            <span style={{ marginLeft: 'auto', fontSize: '0.65rem', padding: '2px 10px', borderRadius: 20, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', color: '#f59e0b', fontWeight: 600 }}>
+              ● RUNNING
+            </span>
+          )}
         </div>
-        <div className="flex gap-3">
+        <div style={{ display: 'flex', gap: 10 }}>
           <input
             value={goal}
             onChange={e => setGoal(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && runAgent()}
             placeholder="e.g. Research AI code review tools and write a competitive analysis..."
-            className="flex-1 bg-gray-800 text-white px-4 py-3 rounded-xl border border-gray-600 focus:border-amber-500 outline-none text-sm"
+            style={{ flex: 1, background: 'rgba(255,255,255,0.04)', color: '#e2e8f0', padding: '12px 16px', borderRadius: 12, border: '1px solid rgba(99,102,241,0.2)', outline: 'none', fontSize: '0.875rem', fontFamily: 'inherit' }}
           />
           <button
             onClick={runAgent}
             disabled={running || !goal.trim()}
-            className="bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-black font-bold px-5 py-3 rounded-xl transition-all"
+            style={{ background: running || !goal.trim() ? 'rgba(99,102,241,0.3)' : 'linear-gradient(135deg,#f59e0b,#ef4444)', border: 'none', borderRadius: 12, padding: '12px 18px', cursor: running || !goal.trim() ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
           >
-            {running ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            {running ? <Loader2 size={16} color="#fff" style={{ animation: 'spin 1s linear infinite' }} /> : <Send size={16} color="#fff" />}
           </button>
         </div>
       </div>
 
+      {/* Delegation cascade */}
       <DelegationCascade
         delegationResult={delegationResult}
         cascadeEvents={cascadeEvents}
         subAgentStatuses={subAgentStatuses}
       />
 
-      {running || totalSpent > 0 ? (
+      {/* Budget tracker */}
+      {(running || totalSpent > 0) && (
         <BudgetTracker totalBudget={budget} spent={totalSpent} payments={payments} />
-      ) : null}
+      )}
 
+      {/* Live event feed */}
       {events.length > 0 && (
-        <div className="p-4 bg-gray-900 rounded-2xl border border-gray-700">
-          <h3 className="text-white font-bold text-sm mb-3 flex items-center gap-2">
-            <span className={`w-2 h-2 rounded-full ${running ? 'bg-amber-400 animate-pulse' : 'bg-green-400'}`} />
-            Agent Activity
-          </h3>
-          <div ref={feedRef} className="h-64 overflow-y-auto space-y-1 font-mono text-xs">
-            {events.map((event, i) => (
-              <div key={i} className={`flex gap-2 ${getEventColor(event.type)}`}>
-                <span>{getEventIcon(event.type)}</span>
-                <span>{event.message}</span>
-              </div>
-            ))}
+        <div style={{ background: 'rgba(10,12,20,0.7)', backdropFilter: 'blur(20px)', border: '1px solid rgba(99,102,241,0.15)', borderRadius: 16, padding: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+            <div style={{ width: 8, height: 8, borderRadius: '50%', background: running ? '#f59e0b' : '#22c55e', boxShadow: `0 0 8px ${running ? '#f59e0b' : '#22c55e'}`, animation: running ? 'neon-pulse 1s ease-in-out infinite' : undefined }} />
+            <span style={{ color: '#f8fafc', fontWeight: 700, fontSize: '0.85rem' }}>Agent Activity</span>
+            <span style={{ marginLeft: 'auto', color: '#475569', fontSize: '0.65rem', fontFamily: 'JetBrains Mono, monospace' }}>{events.length} events</span>
+          </div>
+          <div ref={feedRef} style={{ height: 280, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {events.map((event, i) => {
+              const style = EVENT_STYLES[event.type] || { color: '#64748b', icon: '·' }
+              return (
+                <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '3px 0', borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
+                  <span style={{ fontSize: '0.75rem', flexShrink: 0, lineHeight: 1.6 }}>{style.icon}</span>
+                  <span style={{ color: style.color, fontSize: '0.72rem', fontFamily: 'JetBrains Mono, monospace', lineHeight: 1.6, wordBreak: 'break-word' }}>{event.message}</span>
+                </div>
+              )
+            })}
           </div>
         </div>
       )}
 
+      {/* Payment log */}
       {payments.length > 0 && <PaymentLog payments={payments} />}
 
+      {/* Final report */}
       {report && <ReportViewer report={report} />}
     </div>
   )

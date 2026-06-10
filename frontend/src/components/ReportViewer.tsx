@@ -11,20 +11,18 @@ export function ReportViewer({ report }: { report: string }) {
   }
 
   return (
-    <div className="p-4 bg-gray-900 rounded-2xl border border-green-700">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <FileText className="text-green-400 w-4 h-4" />
-          <h3 className="text-white font-bold text-sm">Agent Report — Complete</h3>
+    <div style={{ background: 'rgba(10,12,20,0.7)', backdropFilter: 'blur(20px)', border: '1px solid rgba(34,197,94,0.25)', borderRadius: 16, padding: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <FileText size={16} color="#22c55e" />
+          <span style={{ color: '#f8fafc', fontWeight: 700, fontSize: '0.85rem' }}>Agent Report</span>
+          <span style={{ fontSize: '0.65rem', padding: '2px 8px', borderRadius: 4, background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', color: '#22c55e', fontWeight: 600 }}>COMPLETE</span>
         </div>
-        <button
-          onClick={handleDownload}
-          className="flex items-center gap-1 text-xs text-gray-400 hover:text-white transition-colors"
-        >
-          <Download className="w-3 h-3" /> Download
+        <button onClick={handleDownload} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.72rem', color: '#64748b', background: 'none', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 8, padding: '4px 10px', cursor: 'pointer' }}>
+          <Download size={12} /> Export
         </button>
       </div>
-      <div className="bg-gray-800 rounded-lg p-4 text-sm text-gray-300 max-h-96 overflow-y-auto whitespace-pre-wrap font-mono leading-relaxed">
+      <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 10, padding: 16, fontSize: '0.8rem', color: '#94a3b8', maxHeight: 400, overflowY: 'auto', whiteSpace: 'pre-wrap', fontFamily: 'JetBrains Mono, monospace', lineHeight: 1.8, border: '1px solid rgba(255,255,255,0.04)' }}>
         {report}
       </div>
     </div>
