@@ -1,160 +1,172 @@
-# NexusAgent
+<div align="center">
 
-> **Autonomous AI that pays for its own intelligence using MetaMask Smart Accounts + ERC-7710 delegations.**
+# ⚡ NexusAgent
 
-The world's first AI agent that funds itself via a cryptographically-enforced delegation cascade — no trusted intermediaries, no hard-coded spending limits, no ETH for gas.
+### *The AI Agent That Pays For Its Own Intelligence*
 
-## What Makes This Unique
-
-| Other agents | NexusAgent |
-|---|---|
-| Fake/hardcoded delegation signatures | Real EIP-712 signatures via MetaMask SDK |
-| Single agent, one API key | 4-level delegation cascade (User → Orchestrator → 3 Sub-agents) |
-| ETH for gas | USDC-only via 1Shot relayer |
-| Trusted payment | On-chain ERC20TransferAmountEnforcer caveat |
-| Manual key management | `toMetaMaskSmartAccount` + EIP-7702 Stateless7702 |
-
-## Architecture
-
-```
-User (MetaMask Smart Account, EIP-7702)
-    │  signs root delegation (budget: N USDC, enforced on-chain)
-    ▼
-Orchestrator Agent  ←── AGENT_PRIVATE_KEY
-    │  creates 3 redelegations (40% / 35% / 25% of budget)
-    ├──▶ Researcher  ──▶ Venice AI (x402 + 1Shot)
-    ├──▶ Analyst     ──▶ Venice AI (x402 + 1Shot)
-    └──▶ Synthesizer ──▶ Venice AI (x402 + 1Shot)
-                              │
-                         Final Report
-```
-
-Stack: **React+Vite · FastAPI · LangGraph · @metamask/smart-accounts-kit · Venice AI · 1Shot Relayer · ERC-7710 · Base mainnet**
+[![Live Demo](https://img.shields.io/badge/🚀_Live_Demo-nexus--agent--omega.vercel.app-orange?style=for-the-badge)](https://nexus-agent-omega.vercel.app/)
+[![Backend](https://img.shields.io/badge/🔧_Backend-nexusagent.onrender.com-blue?style=for-the-badge)](https://nexusagent.onrender.com/health)
+[![Base Mainnet](https://img.shields.io/badge/⛓_Chain-Base_Mainnet-0052FF?style=for-the-badge)](https://basescan.org)
 
 ---
 
-## Quick Start
+**Sign once. Agent runs forever. Pays itself.**
 
-### 1. Backend
+> The world's first autonomous AI agent that uses **ERC-7710 delegated permissions** to fund its own Venice AI calls via **x402 micropayments** — with zero human intervention after the initial signature.
 
-```bash
-cd backend
+</div>
 
-# Windows
-venv\Scripts\activate
-# macOS/Linux
-source venv/bin/activate
+---
 
-pip install -r requirements.txt
-cp .env.example .env
-# Edit .env — set AGENT_PRIVATE_KEY and VENICE_API_KEY
+## 🎬 See It In Action
 
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
+1. Connect MetaMask          →  EIP-7702 smart account, Base mainnet
+2. Set budget ($1–$100 USDC) →  Drag slider, pick preset, or type custom
+3. Sign ONE delegation        →  MetaMask popup. Last time you touch your wallet.
+4. Type any research goal     →  "Best DeFi yield on Base right now?"
+5. Watch the agent work       →  3 AI sub-agents fire in parallel
+                                  Each pays Venice AI $0.003 via x402
+                                  Decision hash logged on-chain
+                                  Full report delivered in <30 seconds
 ```
 
-API docs: **http://localhost:8000/docs**
+**[→ Try it live now](https://nexus-agent-omega.vercel.app/)**
 
-### 2. Frontend
+---
 
+## 🧠 What Makes This Different
+
+| Every other agent | NexusAgent |
+|---|---|
+| Hardcoded API keys | Agent pays per-call via x402 micropayments |
+| Single LLM call | 3 parallel sub-agents (Researcher + Analyst + Synthesizer) |
+| Simulated delegation | Real EIP-712 signature, real on-chain enforcement |
+| ETH for gas | USDC-only via 1Shot relayer — zero ETH needed |
+| "Trust me" spending | `ERC20TransferAmountEnforcer` caveat — budget enforced by contract |
+| Manual approval per action | Sign once, agent runs autonomously within budget |
+
+---
+
+## ⚙️ Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    YOU (MetaMask Wallet)                     │
+│              EIP-7702 Stateless Smart Account               │
+│         Sign ONE root delegation → $N USDC budget           │
+└────────────────────────┬────────────────────────────────────┘
+                         │  ERC-7710 root delegation
+                         ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   ORCHESTRATOR AGENT                         │
+│            Creates 3 sub-delegations on-chain               │
+│         Researcher 40% │ Analyst 35% │ Synthesizer 25%      │
+└──────────┬─────────────┴──────────────┬──────────────┬──────┘
+           │                            │              │
+           ▼                            ▼              ▼
+    ┌─────────────┐            ┌──────────────┐  ┌──────────────┐
+    │  RESEARCHER │            │   ANALYST    │  │ SYNTHESIZER  │
+    │Venice AI call│           │Venice AI call│  │Venice AI call│
+    │ pays $0.003 │            │ pays $0.003  │  │ pays $0.003  │
+    │  via x402   │            │  via x402    │  │  via x402    │
+    └─────────────┘            └──────────────┘  └──────────────┘
+                                      │
+                                      ▼
+                          ┌───────────────────────┐
+                          │   DECISION + REPORT    │
+                          │  On-chain hash proof   │
+                          │  APY, Risk, Confidence │
+                          └───────────────────────┘
+```
+
+**Stack:** React + Vite · FastAPI · LangGraph · `@metamask/smart-accounts-kit` · Venice AI · 1Shot Relayer · ERC-7710 · Base Mainnet
+
+---
+
+## 🚀 Quick Start
+
+### Backend
+```bash
+cd backend
+pip install -r requirements.txt
+cp .env.example .env          # Set VENICE_API_KEY and AGENT_PRIVATE_KEY
+uvicorn main:app --reload --port 8000
+```
+
+### Frontend
 ```bash
 cd frontend
 npm install
-cp .env.example .env
+echo "VITE_BACKEND_URL=http://localhost:8000" > .env
 npm run dev
 ```
 
-UI: **http://localhost:5173**
-
----
-
-## Judge Demo (No MetaMask Required)
-
-Run the agent pipeline entirely from the command line with a real signed delegation:
-
+### Instant API Test (no MetaMask)
 ```bash
-cd backend
-python demo_run.py
-```
-
-Or hit the API directly:
-
-```bash
-# One-click demo endpoint — creates real delegation, runs full pipeline
-curl -s -X POST http://localhost:8000/agent/demo | python -m json.tool
-
-# Health check
-curl http://localhost:8000/health
-
-# Agent addresses
-curl http://localhost:8000/agent/addresses
+curl https://nexusagent.onrender.com/health
+curl https://nexusagent.onrender.com/agent/addresses
+curl -X POST https://nexusagent.onrender.com/agent/demo | python -m json.tool
 ```
 
 ---
 
-## Environment Variables
+## 🔑 Environment Variables
 
-### Backend (`backend/.env`)
-
+### `backend/.env`
 ```env
-# Venice AI
-VENICE_API_KEY=your_venice_api_key
-VENICE_BASE_URL=https://api.venice.ai/api/v1
+VENICE_API_KEY=your_key_here
 VENICE_MODEL=llama-3.3-70b
-VENICE_PAYMENT_USDC=0.003
-VENICE_PAYMENT_ADDRESS=0x2670B922ef37C7Df47158725C0CC407b5382293F
-
-# 1Shot Relayer
-ONESHOT_RELAYER_URL=https://relayer.1shotapi.com/relayers
-
-# Orchestrator wallet (EOA private key — never commit)
-AGENT_PRIVATE_KEY=0x...64hexchars
-
-# Chain
+AGENT_PRIVATE_KEY=0x...your_orchestrator_key
 CHAIN_ID=8453
 ```
 
-### Frontend (`frontend/.env`)
-
+### `frontend/.env`
 ```env
-VITE_BACKEND_URL=http://localhost:8000
-VITE_BASE_RPC_URL=https://mainnet.base.org
+VITE_BACKEND_URL=https://nexusagent.onrender.com
 ```
 
 ---
 
-## API Endpoints
+## 📡 API Reference
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/` | Service info & endpoint map |
-| `GET` | `/health` | Health check |
+| Method | Endpoint | What it does |
+|--------|----------|-------------|
+| `GET` | `/health` | Service status |
 | `GET` | `/agent/addresses` | Orchestrator + sub-agent wallet addresses |
-| `POST` | `/agent/run` | SSE streaming — real-time agent execution |
-| `POST` | `/agent/run/sync` | Full JSON response — complete pipeline result |
-| `POST` | `/agent/demo` | One-click demo — real delegation, no MetaMask |
-| `POST` | `/delegation/store` | Store signed delegation from frontend |
+| `POST` | `/agent/run` | **SSE stream** — real-time agent execution |
+| `POST` | `/agent/demo` | One-click demo, no MetaMask needed |
 
 ---
 
-## ERC-7710 Delegation Chain
+## 🔗 ERC-7710 Delegation Chain
 
 ```
-root delegation    : User → Orchestrator     (authority = ROOT_AUTHORITY = bytes32(0))
-sub redelegation 1 : Orchestrator → Researcher  (authority = struct_hash(root))
-sub redelegation 2 : Orchestrator → Analyst     (authority = struct_hash(root))
-sub redelegation 3 : Orchestrator → Synthesizer (authority = struct_hash(root))
-call delegation    : Sub-Agent → 1Shot target   (authority = struct_hash(sub))
+Root:    User → Orchestrator        authority = bytes32(0)  budget = N USDC
+Sub-1:   Orchestrator → Researcher  authority = hash(root)  budget = 40%
+Sub-2:   Orchestrator → Analyst     authority = hash(root)  budget = 35%
+Sub-3:   Orchestrator → Synthesizer authority = hash(root)  budget = 25%
 
-All delegations use ERC20TransferAmountEnforcer caveat:
-  terms = encodePacked(address token, uint256 maxAmount) = 52 bytes
+Caveat enforcer: ERC20TransferAmountEnforcer
+Terms encoding: encodePacked(address token, uint256 maxAmount) = 52 bytes
 ```
 
 ---
 
-## Prize Tracks
+## 🏆 Prize Tracks
 
-- 🥇 **Best Agent** — Autonomous multi-agent with real on-chain delegation
-- 🥇 **Best A2A Coordination** — Orchestrator → 3 sub-agents redelegation cascade
-- 🥇 **Best Venice AI** — Venice powers all reasoning, paying per-call via x402
-- 🥇 **Best 1Shot Relayer** — Full ERC-7710 gas abstraction, USDC-only
-- 🥇 **Best x402 + ERC-7710** — Complete implementation, not a demo stub
+- 🥇 **Best Agent** — Full autonomous multi-agent pipeline, live on mainnet
+- 🥇 **Best A2A Coordination** — Real 4-level delegation cascade, not simulated
+- 🥇 **Best Venice AI** — Every reasoning call pays Venice via x402, on-chain proof
+- 🥇 **Best 1Shot Relayer** — Complete ERC-7710 + USDC gas abstraction
+- 🥇 **Best x402** — Machine-to-machine micropayments, working implementation
+
+---
+
+<div align="center">
+
+**Built for the MetaMask AI Agent Hackathon 2025**
+
+*Sign once. Let the agent work.*
+
+</div>
