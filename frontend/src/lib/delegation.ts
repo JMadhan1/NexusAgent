@@ -78,9 +78,13 @@ export async function createAgentDelegation(
     message: {
       delegate: delegationToSign.delegate,
       delegator: delegationToSign.delegator,
-      authority: delegationToSign.authority,
-      caveats: delegationToSign.caveats,
-      salt: delegationToSign.salt,
+      authority: (delegationToSign.authority as string).padEnd(66, '0') as `0x${string}`,
+      caveats: delegationToSign.caveats.map((c: any) => ({
+        enforcer: c.enforcer,
+        terms: c.terms ?? '0x',
+        args: c.args ?? '0x',
+      })),
+      salt: ('0x' + (delegationToSign.salt as string).replace('0x', '').padStart(64, '0')) as `0x${string}`,
     },
   })
 
