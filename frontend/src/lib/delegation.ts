@@ -43,7 +43,7 @@ export async function createAgentDelegation(
   budgetUsdc: number,
   agentAddress: `0x${string}`,
 ): Promise<DelegationResult> {
-  const { smartAccount, environment, walletClient, address } = accountResult
+  const { smartAccount, environment, address } = accountResult
   const maxAmount = parseUnits(budgetUsdc.toString(), 6)
 
   const delegationManager = environment.DelegationManager as `0x${string}`
@@ -62,12 +62,23 @@ export async function createAgentDelegation(
     },
   })
 
-  // Sign via walletClient.signTypedData — avoids "internal account" restriction
+  // Sign via raw eth_signTypedData_v4 — bypasses MetaMask kit restriction on internal accounts
   const { signature: _unused, ...delegationToSign } = delegation
-  const signature = await walletClient.signTypedData({
-    account: address,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    types: DELEGATION_TYPES,
+  const saltHex = ('0x' + (delegationToSign.salt as string).replace('0x', '').padStart(64, '0')) as `0x${string}`
+  const authorityHex = ((delegationToSign.authority as string).length < 66
+    ? (delegationToSign.authority as string).padEnd(66, '0')
+    : delegationToSign.authority) as `0x${string}`
+
+  const typedData = {
+    types: {
+      EIP712Domain: [
+        { name: 'name', type: 'string' },
+        { name: 'version', type: 'string' },
+        { name: 'chainId', type: 'uint256' },
+        { name: 'verifyingContract', type: 'address' },
+      ],
+      ...DELEGATION_TYPES,
+    },
     primaryType: 'Delegation',
     domain: {
       name: 'DelegationManager',
@@ -78,15 +89,20 @@ export async function createAgentDelegation(
     message: {
       delegate: delegationToSign.delegate,
       delegator: delegationToSign.delegator,
-      authority: (delegationToSign.authority as string).padEnd(66, '0') as `0x${string}`,
+      authority: authorityHex,
       caveats: delegationToSign.caveats.map((c: any) => ({
         enforcer: c.enforcer,
         terms: c.terms ?? '0x',
         args: c.args ?? '0x',
       })),
-      salt: ('0x' + (delegationToSign.salt as string).replace('0x', '').padStart(64, '0')) as `0x${string}`,
+      salt: saltHex,
     },
-  })
+  }
+
+  const signature = await (window.ethereum as any).request({
+    method: 'eth_signTypedData_v4',
+    params: [address, JSON.stringify(typedData)],
+  }) as `0x${string}`
 
   const signedDelegation: Delegation = { ...delegation, signature }
 
