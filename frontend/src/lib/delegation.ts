@@ -76,7 +76,7 @@ export async function createAgentDelegation(
     },
     primaryType: 'Delegation',
     domain: {
-      name: 'DelegationManager',
+      name: 'NexusAgent',
       version: '1',
       chainId: 8453,
       verifyingContract: delegationManager,
@@ -101,24 +101,36 @@ export async function createAgentDelegation(
       method: 'eth_signTypedData_v4',
       params: [address, JSON.stringify(typedData)],
     }) as `0x${string}`
-  } catch (e: any) {
-    // MetaMask blocks typed data for ERC-7702 internal accounts
-    // Fall back: hash the delegation and sign the raw hash with personal_sign
-    const delegationHash = hashTypedData({
-      types: DELEGATION_TYPES,
-      primaryType: 'Delegation',
-      domain: {
-        name: 'DelegationManager',
-        version: '1',
-        chainId: 8453,
-        verifyingContract: delegationManager,
-      },
-      message: typedData.message,
-    })
-    signature = await (window.ethereum as any).request({
-      method: 'personal_sign',
-      params: [delegationHash, address],
-    }) as `0x${string}`
+  } catch (e1: any) {
+    // eth_signTypedData_v4 blocked — try eth_sign on raw EIP-712 hash
+    try {
+      const delegationHash = hashTypedData({
+        types: DELEGATION_TYPES,
+        primaryType: 'Delegation',
+        domain: {
+          name: 'NexusAgent',
+          version: '1',
+          chainId: 8453,
+          verifyingContract: delegationManager,
+        },
+        message: typedData.message,
+      })
+      signature = await (window.ethereum as any).request({
+        method: 'eth_sign',
+        params: [address, delegationHash],
+      }) as `0x${string}`
+    } catch (e2: any) {
+      const delegationHash = hashTypedData({
+        types: DELEGATION_TYPES,
+        primaryType: 'Delegation',
+        domain: { name: 'NexusAgent', version: '1', chainId: 8453, verifyingContract: delegationManager },
+        message: typedData.message,
+      })
+      signature = await (window.ethereum as any).request({
+        method: 'personal_sign',
+        params: [delegationHash, address],
+      }) as `0x${string}`
+    }
   }
 
   const signedDelegation: Delegation = { ...delegation, signature }
