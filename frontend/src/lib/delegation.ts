@@ -1,7 +1,6 @@
 import { parseUnits } from 'viem'
 import {
   createDelegation,
-  ROOT_AUTHORITY,
   ScopeType,
   type Delegation,
   type Caveat,
@@ -35,12 +34,11 @@ export async function createAgentDelegation(
   const enforcerAddress = environment.caveatEnforcers
     ?.ERC20TransferAmountEnforcer as `0x${string}` ?? '0x0000000000000000000000000000000000000000'
 
-  // New API: environment always required; parentDelegation=ROOT_AUTHORITY for root delegations
+  // Root delegation: scope-only (no parentDelegation/parentPermissionContext)
   const delegation = createDelegation({
     environment,
     from: smartAccount.address as `0x${string}`,
     to: agentAddress,
-    parentDelegation: ROOT_AUTHORITY,
     scope: {
       type: ScopeType.Erc20TransferAmount,
       tokenAddress: USDC_ADDRESS,
