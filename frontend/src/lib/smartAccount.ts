@@ -69,13 +69,23 @@ export async function createSmartAccount(): Promise<SmartAccountResult> {
 
   const environment = getSmartAccountsEnvironment(base.id)
 
-  const smartAccount = await toMetaMaskSmartAccount({
+  let smartAccount: Awaited<ReturnType<typeof toMetaMaskSmartAccount>>
+  try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    client: publicClient as any,
-    implementation: Implementation.Stateless7702,
-    address,
-    signer: { walletClient },
-  })
+    smartAccount = await toMetaMaskSmartAccount({
+      client: publicClient as any,
+      implementation: Implementation.Stateless7702,
+      address,
+      signer: { walletClient },
+    })
+  } catch {
+    // Fallback: kit can't wrap this account (e.g. not a MetaMask Flask build)
+    // We still have address + environment — enough for delegation signing
+    smartAccount = {
+      address,
+      signDelegation: async () => { throw new Error('Use eth_signTypedData_v4 directly') },
+    } as any
+  }
 
   return { smartAccount, address, environment, walletClient }
 }
