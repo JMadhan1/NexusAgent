@@ -1,11 +1,6 @@
-import { parseUnits } from 'viem'
+import { parseUnits, hashTypedData } from 'viem'
 import type { SmartAccountResult } from './smartAccount'
-import {
-  createDelegation,
-  ScopeType,
-  type Delegation,
-  type Caveat,
-} from '@metamask/smart-accounts-kit'
+import { createDelegation, ScopeType, type Delegation, type Caveat } from '@metamask/smart-accounts-kit'
 
 // EIP-712 types for Delegation signing (from delegation-framework spec)
 const DELEGATION_TYPES = {
@@ -99,10 +94,32 @@ export async function createAgentDelegation(
     },
   }
 
-  const signature = await (window.ethereum as any).request({
-    method: 'eth_signTypedData_v4',
-    params: [address, JSON.stringify(typedData)],
-  }) as `0x${string}`
+  let signature: `0x${string}`
+  try {
+    // Try EIP-712 typed data first
+    signature = await (window.ethereum as any).request({
+      method: 'eth_signTypedData_v4',
+      params: [address, JSON.stringify(typedData)],
+    }) as `0x${string}`
+  } catch (e: any) {
+    // MetaMask blocks typed data for ERC-7702 internal accounts
+    // Fall back: hash the delegation and sign the raw hash with personal_sign
+    const delegationHash = hashTypedData({
+      types: DELEGATION_TYPES,
+      primaryType: 'Delegation',
+      domain: {
+        name: 'DelegationManager',
+        version: '1',
+        chainId: 8453,
+        verifyingContract: delegationManager,
+      },
+      message: typedData.message,
+    })
+    signature = await (window.ethereum as any).request({
+      method: 'personal_sign',
+      params: [delegationHash, address],
+    }) as `0x${string}`
+  }
 
   const signedDelegation: Delegation = { ...delegation, signature }
 
