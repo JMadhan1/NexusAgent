@@ -69,9 +69,9 @@ export async function createSmartAccount(): Promise<SmartAccountResult> {
 
   const environment = getSmartAccountsEnvironment(base.id)
 
-  // @ts-ignore — viem dual-version type conflict between project viem and kit's bundled viem
   const smartAccount = await toMetaMaskSmartAccount({
-    client: publicClient,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    client: publicClient as any,
     implementation: Implementation.Stateless7702,
     address,
     signer: { walletClient },
