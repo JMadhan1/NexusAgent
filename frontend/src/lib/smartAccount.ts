@@ -69,6 +69,7 @@ export async function createSmartAccount(): Promise<SmartAccountResult> {
 
   const environment = getSmartAccountsEnvironment(base.id)
 
+  // @ts-ignore — viem dual-version type conflict between project viem and kit's bundled viem
   const smartAccount = await toMetaMaskSmartAccount({
     client: publicClient,
     implementation: Implementation.Stateless7702,

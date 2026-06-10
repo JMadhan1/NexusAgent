@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { WalletConnect } from './components/WalletConnect'
 import { DelegationSetup } from './components/DelegationSetup'
 import { AgentConsole } from './components/AgentConsole'
@@ -25,14 +25,7 @@ export default function App() {
   const [accountResult, setAccountResult] = useState<SmartAccountResult | null>(null)
   const [delegationResult, setDelegationResult] = useState<DelegationResult | null>(null)
   const [budget, setBudget] = useState(5)
-  const [tick, setTick] = useState(0)
-
   const stepIndex = STEPS.findIndex(s => s.key === step)
-
-  useEffect(() => {
-    const t = setInterval(() => setTick(n => n + 1), 80)
-    return () => clearInterval(t)
-  }, [])
 
   return (
     <div style={{ minHeight: '100vh', background: '#020408', color: '#e2e8f0', position: 'relative', overflow: 'hidden' }}>
